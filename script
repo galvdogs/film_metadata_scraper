@@ -1,0 +1,57 @@
+require 'yay_imdbs'
+
+# Create method for clipping the end off array
+class Array
+  def clip n=1
+    take size - n
+  end
+end
+
+# Identify filepath of all movie files
+film_list = Dir["S:/Films/General Exhibition/**/*.mkv"]
+
+#For each movie, full metadata and write to file
+film_list.each do |f|
+
+  #Pull metadata on the film from the filename
+  @filmname = File.basename(f, ".*").split('.').clip(2).join
+  @filmtitle = @filmname.split(' (')[-2]
+  @filmdate = @filmname.split(' ')[-1].gsub(/[()]/, "")
+  @filmres =  f.split('.')[-3]  
+  @filmqual = f.split('.')[-2]
+
+  #Scrape film metadata from IMDB using yay_imdbs gem
+  @info = YayImdbs.scrap_movie_info(YayImdbs.search_for_imdb_id(@filmtitle, @filmdate.to_i))
+  if @info[:director] == nil
+     @filmdir = @info[:directors]
+   else
+     @filmdir = @info[:director]
+   end
+   @filmdir = @filmdir.try(:split, "   ") || nil
+   @filmdir = @filmdir[0] unless @filmdir == nil
+   if @info[:raw_writer] == nil
+      @filmwriter = @info[:raw_writers]
+    else
+      @filmwriter = @info[:raw_writer]
+    end
+  @filmwriter = @filmwriter.try(:split, "   ") || nil
+  @filmwriter = @filmwriter[0] unless @filmwriter == nil
+  @filmstars = @info[:raw_stars].try(:split, "   ") || nil
+  @filmstars = @filmstars[0] unless @filmstars == nil
+  @filmplot = @info[:plot]
+  @filmgenre = @info[:raw_genres].gsub(/.\|\n/, ',')
+
+  #Write the scraped data to text file
+  File.open("C:/dummy/#{@filmname}.txt", "w") do |line|
+    line.puts "Title: #{@filmtitle}"
+    line.puts "\r" + "Date: #{@filmdate}"
+    line.puts "\r" + "Resolution: #{@filmres}"
+    line.puts "\r" + "Quality/Source: #{@filmqual}"
+    line.puts "\r" + "Genre: #{@filmgenre}"
+    line.puts "\r" + "Directed by: #{@filmdir}"
+    line.puts "\r" + "Written by : #{@filmwriter}"
+    line.puts "\r" + "Cast: #{@filmstars}"
+    line.puts "\r" + "Plot: #{@filmplot}"
+  end
+  puts @filmname
+end
